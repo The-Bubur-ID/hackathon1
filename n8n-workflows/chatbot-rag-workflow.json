@@ -44,19 +44,14 @@
           "maxTokens": 1500
         },
         "messages": {
-          "messageType": "multipleMessages",
           "values": [
             {
-              "message": "={{\"system\"}}"
+              "role": "system",
+              "content": "You are a PCI DSS compliance assistant with access to internal security policies, compliance documentation, and security findings database.\n\nWhen answering questions:\n1. Always search the knowledge base first using the search_knowledge_base tool\n2. If asking about specific findings, use the get_evidence_package tool\n3. For compliance status queries, use the check_compliance_status tool\n4. Provide accurate, cited responses with source references\n5. If information is not available, clearly state so\n6. Focus on actionable compliance guidance\n\nAlways cite your sources using: [Source: document_name]\nFor database results, use: [Source: Security Findings Database]"
             },
             {
-              "message": "You are a PCI DSS compliance assistant with access to internal security policies, compliance documentation, and security findings database.\n\nWhen answering questions:\n1. Always search the knowledge base first using the search_knowledge_base tool\n2. If asking about specific findings, use the get_evidence_package tool\n3. For compliance status queries, use the check_compliance_status tool\n4. Provide accurate, cited responses with source references\n5. If information is not available, clearly state so\n6. Focus on actionable compliance guidance\n\nAlways cite your sources using: [Source: document_name]\nFor database results, use: [Source: Security Findings Database]"
-            },
-            {
-              "message": "={{\"user\"}}"
-            },
-            {
-              "message": "User Question: {{$json.user_query}}\n\nPlease help me with this PCI DSS compliance question. Search the knowledge base and provide a comprehensive answer with sources."
+              "role": "user",
+              "content": "={{\"User Question: \" + $json.user_query + \"\\n\\nPlease help me with this PCI DSS compliance question. Search the knowledge base and provide a comprehensive answer with sources.\"}}"
             }
           ]
         },
@@ -151,65 +146,72 @@
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
+          "string": [
             {
-              "id": "search-knowledge",
-              "leftValue": "={{$json.tool_calls?.[0]?.function?.name}}",
-              "rightValue": "search_knowledge_base",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            },
-            {
-              "id": "get-evidence", 
-              "leftValue": "={{$json.tool_calls?.[0]?.function?.name}}",
-              "rightValue": "get_evidence_package",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            },
-            {
-              "id": "check-status",
-              "leftValue": "={{$json.tool_calls?.[0]?.function?.name}}",
-              "rightValue": "check_compliance_status",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
+              "value1": "={{$json.tool_calls?.[0]?.function?.name}}",
+              "operation": "equal",
+              "value2": "search_knowledge_base"
             }
-          ],
-          "combineOperation": "any"
-        },
-        "options": {}
+          ]
+        }
       },
-      "id": "route-tool-calls",
-      "name": "Route Tool Calls",
+      "id": "is-search-tool",
+      "name": "Is Search Tool?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
         900,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.tool_calls?.[0]?.function?.name}}",
+              "operation": "equal",
+              "value2": "get_evidence_package"
+            }
+          ]
+        }
+      },
+      "id": "is-evidence-tool",
+      "name": "Is Evidence Tool?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1120,
         300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.tool_calls?.[0]?.function?.name}}",
+              "operation": "equal",
+              "value2": "check_compliance_status"
+            }
+          ]
+        }
+      },
+      "id": "is-compliance-tool",
+      "name": "Is Compliance Tool?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        360
       ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
         "query": "=SELECT \n  title, content, doc_type, source_type,\n  ts_rank(to_tsvector('english', content), plainto_tsquery('english', $1)) AS relevance\nFROM knowledge_simple \nWHERE (\n  ($2 = 'all' OR doc_type = $2) AND\n  (\n    to_tsvector('english', content) @@ plainto_tsquery('english', $1)\n    OR keywords && string_to_array(lower($1), ' ')\n    OR title ILIKE '%' || $1 || '%'\n  )\n)\nORDER BY relevance DESC, created_at DESC\nLIMIT LEAST(COALESCE($3::int, 5), 10);",
-        "additionalFields": {
-          "mode": "independently"
-        },
-        "values": {
-          "query": "={{$json.tool_calls[0].function.arguments.query}}",
-          "doc_type": "={{$json.tool_calls[0].function.arguments.doc_type || 'all'}}",
-          "top_k": "={{$json.tool_calls[0].function.arguments.top_k || 5}}"
-        }
+        "additionalFields": {},
+        "options": {}
       },
       "id": "search-knowledge-base",
       "name": "Search Knowledge Base", 
@@ -230,12 +232,8 @@
       "parameters": {
         "operation": "executeQuery",
         "query": "=SELECT \n  f.finding_id, f.title, f.severity, f.description, f.fix_suggestion,\n  f.affected_file, f.line_number, f.cwe_id, f.pci_requirement, f.status,\n  ep.evidence_document\nFROM findings f\nLEFT JOIN evidence_packages ep ON f.finding_id = ep.finding_id\nWHERE \n  f.finding_id ILIKE '%' || $1 || '%'\n  OR f.title ILIKE '%' || $1 || '%'\n  OR f.description ILIKE '%' || $1 || '%'\nORDER BY f.created_at DESC\nLIMIT 5;",
-        "additionalFields": {
-          "mode": "independently"
-        },
-        "values": {
-          "finding_id": "={{$json.tool_calls[0].function.arguments.finding_id}}"
-        }
+        "additionalFields": {},
+        "options": {}
       },
       "id": "get-evidence-package",
       "name": "Get Evidence Package",
@@ -254,16 +252,10 @@
     },
     {
       "parameters": {
-        "operation": "executeQuery", 
+        "operation": "executeQuery",
         "query": "=SELECT \n  COALESCE(f.pci_requirement, 'Unknown') as pci_requirement,\n  COUNT(*) as total_findings,\n  COUNT(CASE WHEN f.severity = 'critical' THEN 1 END) as critical_count,\n  COUNT(CASE WHEN f.severity = 'high' THEN 1 END) as high_count,\n  COUNT(CASE WHEN f.severity = 'medium' THEN 1 END) as medium_count,\n  COUNT(CASE WHEN f.severity = 'low' THEN 1 END) as low_count,\n  COUNT(CASE WHEN f.status = 'open' THEN 1 END) as open_count,\n  COUNT(CASE WHEN f.status = 'resolved' THEN 1 END) as resolved_count,\n  COUNT(CASE WHEN f.status = 'verified' THEN 1 END) as verified_count\nFROM findings f\nWHERE \n  ($1 = 'all' OR f.pci_requirement = $1 OR f.pci_requirement ILIKE '%' || $1 || '%')\n  AND ($2 = 'all' OR f.severity = $2)\n  AND ($3 = 'all' OR f.status = $3)\n  AND f.created_at >= NOW() - INTERVAL '30 days'\nGROUP BY f.pci_requirement\nORDER BY total_findings DESC;",
-        "additionalFields": {
-          "mode": "independently"
-        },
-        "values": {
-          "pci_requirement": "={{$json.tool_calls[0].function.arguments.pci_requirement || 'all'}}",
-          "severity_filter": "={{$json.tool_calls[0].function.arguments.severity_filter || 'all'}}",
-          "status_filter": "={{$json.tool_calls[0].function.arguments.status_filter || 'all'}}"
-        }
+        "additionalFields": {},
+        "options": {}
       },
       "id": "check-compliance-status",
       "name": "Check Compliance Status",
@@ -309,9 +301,18 @@
     {
       "parameters": {
         "operation": "insert",
-        "table": "chatbot_queries", 
-        "columns": "user_query, bot_response, sources_used, confidence_score, response_time_ms",
-        "values": "={{$json.search_query}}, {{$json.answer}}, {{JSON.stringify($json.sources)}}, {{$json.confidence}}, {{$json.response_time_ms}}"
+        "schema": "public",
+        "table": "chatbot_queries",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_query": "={{$json.search_query}}",
+            "bot_response": "={{$json.answer}}",
+            "sources_used": "={{JSON.stringify($json.sources)}}",
+            "confidence_score": "={{$json.confidence}}",
+            "response_time_ms": "={{$json.response_time_ms}}"
+          }
+        }
       },
       "id": "log-query",
       "name": "Log ChatBot Query",
@@ -392,14 +393,14 @@
       "main": [
         [
           {
-            "node": "Route Tool Calls",
+            "node": "Is Search Tool?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Route Tool Calls": {
+    "Is Search Tool?": {
       "main": [
         [
           {
@@ -410,14 +411,43 @@
         ],
         [
           {
+            "node": "Is Evidence Tool?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Evidence Tool?": {
+      "main": [
+        [
+          {
             "node": "Get Evidence Package",
-            "type": "main", 
+            "type": "main",
             "index": 0
           }
         ],
         [
           {
+            "node": "Is Compliance Tool?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Compliance Tool?": {
+      "main": [
+        [
+          {
             "node": "Check Compliance Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Tool Results",
             "type": "main",
             "index": 0
           }
