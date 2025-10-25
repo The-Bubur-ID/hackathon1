@@ -1,0 +1,9 @@
+# Required packages for knowledge base ingestion
+psycopg2-binary>=2.9.0
+PyPDF2>=3.0.0
+
+# Optional: for vector embeddings (if USE_PGVECTOR=true)
+openai>=1.0.0
+
+# Development/testing
+python-dotenv>=1.0.0

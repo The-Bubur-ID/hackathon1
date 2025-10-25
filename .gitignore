@@ -1,0 +1,130 @@
+# 🔒 Security - Never commit sensitive data
+.env
+.env.local
+.env.production
+.env.staging
+*.key
+*.pem
+config/secrets.json
+
+# 🗄️ Database credentials and connections
+database.url
+database_url.txt
+connection_string.txt
+railway_credentials.txt
+
+# 🤖 API Keys and tokens
+openai_key.txt
+github_token.txt
+api_keys.json
+credentials.json
+
+# 🐍 Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+venv/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 🧪 Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# 📊 Test results and logs
+test_results.json
+*.log
+logs/
+*.sqlite
+*.db
+
+# 🖥️ IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 📱 macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# 📦 Node.js (for future frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 🏗️ Build artifacts
+*.tar.gz
+*.zip
+*.rar
+
+# 📋 Temporary files
+tmp/
+temp/
+.tmp/
+*.tmp
+*.temp
+
+# 🧹 OS generated files
+*.orig
+*.bak
+*.backup
+*.old
+
+# 🔄 Version control
+.git/
+*.patch
+
+# 📝 Documentation drafts (keep only final versions)
+*-draft.md
+*-temp.md
+NOTES.md
+TODO.md
+
+# 🚀 Deployment specific
+.railway/
+.vercel/
+.netlify/
+
+# 📊 Analytics and monitoring
+.analytics/
+monitoring/
+
+# 🎯 Local development only
+local_*
+dev_*
+test_local_*
+
+# ⚠️ IMPORTANT: Files that should NEVER be committed
+# Add any file containing real credentials here
+setup_with_credentials.sh
+real_database_url.txt
+production_secrets.env
+.claude/settings.local.json
