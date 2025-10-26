@@ -1,183 +1,143 @@
 {
-  "meta": {
-    "instanceId": "doku-compliance-poc"
-  },
-  "name": "PCI Requirement 6 - Security Automation",
   "nodes": [
     {
       "parameters": {
         "rule": {
           "interval": [
             {
-              "triggerAtHour": 9,
-              "triggerAtMinute": 0,
-              "weekdays": [
-                1
-              ]
+              "triggerAtHour": 9
             }
           ]
         }
       },
-      "id": "trigger-schedule",
+      "id": "946304ff-783b-4d56-b3fa-690de229144d",
       "name": "Weekly Security Scan",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.1,
       "position": [
-        240,
-        300
+        -1216,
+        384
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Mock Snyk SAST Findings for Demo\n// Replace with real Snyk API call in production\n\nconst mockFindings = [\n  {\n    id: \"SNYK-JS-001\",\n    title: \"SQL Injection in Payment Controller\",\n    severity: \"critical\",\n    description: \"User input directly concatenated into SQL query without sanitization. This allows attackers to manipulate the SQL query and potentially access, modify, or delete data.\",\n    affected_file: \"src/controllers/payment.controller.js\",\n    line_number: 145,\n    cwe_id: \"CWE-89\",\n    package_name: \"payment-gateway\",\n    vulnerable_code: \"const query = `SELECT * FROM payments WHERE user_id = ${req.query.id}`;`,\n    snyk_url: \"https://app.snyk.io/vuln/SNYK-JS-001\"\n  },\n  {\n    id: \"SNYK-JS-002\", \n    title: \"Cross-Site Scripting in Error Handler\",\n    severity: \"high\",\n    description: \"User input reflected in error messages without proper HTML encoding. This allows attackers to inject malicious scripts that execute in other users' browsers.\",\n    affected_file: \"src/middleware/error.handler.js\",\n    line_number: 67,\n    cwe_id: \"CWE-79\",\n    package_name: \"merchant-api\",\n    vulnerable_code: \"res.send(`<h1>Error: ${userInput}</h1>`);`,\n    snyk_url: \"https://app.snyk.io/vuln/SNYK-JS-002\"\n  },\n  {\n    id: \"SNYK-JS-003\",\n    title: \"Insecure Random Number Generation\",\n    severity: \"medium\", \n    description: \"Application uses Math.random() for generating security-sensitive values. This is cryptographically weak and predictable.\",\n    affected_file: \"src/utils/token.generator.js\",\n    line_number: 23,\n    cwe_id: \"CWE-338\",\n    package_name: \"auth-service\",\n    vulnerable_code: \"const token = Math.random().toString(36);\",\n    snyk_url: \"https://app.snyk.io/vuln/SNYK-JS-003\"\n  }\n];\n\n// Get current repository from trigger or default\nconst repoName = $input.first().json.repository?.name || 'demo-repo';\n\n// Filter findings for current repo (in real scenario, this would come from Snyk API)\nconst repoFindings = mockFindings.map(finding => ({\n  ...finding,\n  repository: repoName,\n  scan_date: new Date().toISOString(),\n  scan_tool: \"Snyk SAST\"\n}));\n\nreturn repoFindings.map(finding => ({ json: finding }));"
-      },
-      "id": "mock-snyk-scan",
-      "name": "Mock Snyk Security Scan",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        460,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "model": "gpt-4o",
-        "options": {
-          "temperature": 0.3,
-          "maxTokens": 2000
-        },
-        "messages": {
-          "messageType": "multipleMessages",
-          "values": [
+        "url": "=https://api.snyk.io/rest/groups/8fd0a32f-d1a9-4df5-bc45-7920d26a73f7/issues?version=2024-10-15",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
             {
-              "message": "={{\"system\"}}"
-            },
-            {
-              "message": "You are a PCI DSS security expert specializing in Requirement 6 (Secure Development). Analyze the security finding and provide comprehensive remediation guidance.\n\nFor each finding, output EXACTLY this JSON structure (no markdown, no extra text):\n{\n  \"finding_id\": \"unique_id_based_on_input\",\n  \"severity\": \"critical|high|medium|low\",\n  \"pci_requirement\": \"6.x.x format\",\n  \"cwe_id\": \"from input\",\n  \"title\": \"clear title\",\n  \"description\": \"detailed vulnerability explanation\",\n  \"fix_suggestion\": \"specific code fix with examples\",\n  \"risk_score\": \"number 1-10\",\n  \"evidence\": {\n    \"scan_tool\": \"Snyk SAST\",\n    \"scan_date\": \"current_timestamp\",\n    \"repo\": \"repository_name\",\n    \"file\": \"affected_file_path\",\n    \"line\": \"line_number\"\n  }\n}"
-            },
-            {
-              "message": "={{\"user\"}}"
-            },
-            {
-              "message": "Security Finding Analysis Request:\n\nFinding ID: {{$json.id}}\nTitle: {{$json.title}}\nSeverity: {{$json.severity}}\nDescription: {{$json.description}}\nAffected File: {{$json.affected_file}}:{{$json.line_number}}\nCWE: {{$json.cwe_id}}\nVulnerable Code: {{$json.vulnerable_code}}\nRepository: {{$json.repository}}\n\nPlease analyze this finding and map it to the appropriate PCI DSS Requirement 6 sub-requirement. Provide specific fix recommendations with code examples."
+              "name": "Content-Type",
+              "value": "application/vnd.api+json"
             }
           ]
         },
-        "tools": [
-          {
-            "toolType": "function",
-            "function": {
-              "name": "query_pci_requirements",
-              "description": "Search PCI DSS requirements database for relevant compliance information",
-              "parameters": {
-                "type": "object",
-                "properties": {
-                  "query": {
-                    "type": "string",
-                    "description": "Search term for PCI requirements"
-                  },
-                  "requirement_section": {
-                    "type": "string",
-                    "description": "Specific PCI requirement section (e.g., 6.5.1)"
-                  }
-                },
-                "required": ["query"]
-              }
-            }
-          }
-        ]
+        "options": {}
       },
-      "id": "ai-security-analysis",
-      "name": "AI Security Analysis",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1.4,
+      "id": "0b6b9a07-b353-4dde-9ccf-0577953be565",
+      "name": "Get Snyk Code Issues",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
-        680,
-        300
+        -992,
+        384
       ],
       "credentials": {
-        "openAiApi": {
-          "id": "openai-credentials",
-          "name": "OpenAI API"
+        "httpHeaderAuth": {
+          "id": "sPQI06nof9em49E7",
+          "name": "Snyk Header Auth account"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Parse AI response and format for database storage\nconst aiResponse = $input.first().json.response;\n\nlet analysisResult;\ntry {\n  // Try to parse JSON from AI response\n  analysisResult = JSON.parse(aiResponse);\n} catch (error) {\n  // If JSON parsing fails, extract information manually\n  console.log('AI response is not valid JSON, extracting manually...');\n  \n  const originalFinding = $input.first().json;\n  \n  // Map severity to PCI requirement\n  let pciRequirement;\n  if (originalFinding.cwe_id === 'CWE-89') {\n    pciRequirement = '6.5.1'; // SQL Injection\n  } else if (originalFinding.cwe_id === 'CWE-79') {\n    pciRequirement = '6.5.7'; // XSS\n  } else if (originalFinding.cwe_id === 'CWE-338') {\n    pciRequirement = '6.5.3'; // Insecure cryptographic storage\n  } else {\n    pciRequirement = '6.5.6'; // Other high/critical vulnerabilities\n  }\n  \n  // Create structured result\n  analysisResult = {\n    finding_id: `PCI-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,\n    severity: originalFinding.severity,\n    pci_requirement: pciRequirement,\n    cwe_id: originalFinding.cwe_id,\n    title: originalFinding.title,\n    description: originalFinding.description,\n    fix_suggestion: getFix(originalFinding.cwe_id),\n    risk_score: getRiskScore(originalFinding.severity),\n    evidence: {\n      scan_tool: 'Snyk SAST',\n      scan_date: new Date().toISOString(),\n      repo: originalFinding.repository,\n      file: originalFinding.affected_file,\n      line: originalFinding.line_number\n    }\n  };\n}\n\n// Helper functions\nfunction getFix(cweId) {\n  const fixes = {\n    'CWE-89': 'Use parameterized queries: const query = \"SELECT * FROM payments WHERE user_id = ?\"; db.query(query, [userId]);',\n    'CWE-79': 'Encode output: const clean = DOMPurify.sanitize(userInput); res.send(`<h1>Error: ${clean}</h1>`);',\n    'CWE-338': 'Use crypto.randomBytes(): const crypto = require(\"crypto\"); const token = crypto.randomBytes(32).toString(\"hex\");'\n  };\n  return fixes[cweId] || 'Review code for security best practices and apply appropriate fixes.';\n}\n\nfunction getRiskScore(severity) {\n  const scores = { critical: 9, high: 7, medium: 5, low: 3 };\n  return scores[severity] || 5;\n}\n\n// Generate evidence package markdown\nconst evidenceDocument = `# Security Finding Evidence Package\n\n**Finding ID:** ${analysisResult.finding_id}\n**Severity:** ${analysisResult.severity}\n**PCI DSS Requirement:** ${analysisResult.pci_requirement}\n**Risk Score:** ${analysisResult.risk_score}/10\n\n## Vulnerability Details\n- **Repository:** ${analysisResult.evidence.repo}\n- **File:** ${analysisResult.evidence.file}:${analysisResult.evidence.line}\n- **CWE:** ${analysisResult.cwe_id}\n- **Scan Tool:** ${analysisResult.evidence.scan_tool}\n- **Discovery Date:** ${analysisResult.evidence.scan_date}\n\n## Description\n${analysisResult.description}\n\n## Recommended Fix\n\\`\\`\\`\n${analysisResult.fix_suggestion}\n\\`\\`\\`\n\n## Compliance Impact\nThis vulnerability affects PCI DSS ${analysisResult.pci_requirement} compliance and must be addressed according to risk-based prioritization:\n\n- **Critical Severity:** Immediate priority - fix as soon as possible\n- **High Severity:** High priority - fix within 1 week  \n- **Medium Severity:** Standard priority - fix within 1 month (per PCI DSS)\n- **Low Severity:** Low priority - fix in next regular maintenance cycle\n\nNote: All patches must be installed within one month per PCI DSS 6.2.3, with prioritization based on risk assessment.\n\n## Next Steps\n1. Review the recommended fix\n2. Implement the security control\n3. Test the implementation\n4. Update this evidence package with verification details\n5. Mark finding as resolved in tracking system\n\n---\n*Generated by DOKU PCI Compliance Automation*\n*Timestamp: ${new Date().toISOString()}*`;\n\n// Return formatted result\nreturn {\n  ...analysisResult,\n  evidence_document: evidenceDocument,\n  original_finding: $input.first().json\n};"
+        "jsCode": "// Parse Snyk API response and format for processing\nconst snykResponse = $input.first().json;\n\nconst arrayIssue = JSON.parse(snykResponse.data);\nconsole.log(arrayIssue.data)\n// if (!arrayIssue || !Array.isArray(arrayIssue)) {\n//   console.log('No issues found or invalid response from Snyk');\n//   return [];\n// }\n\n// Transform Snyk issues to our internal format\nconst findings = arrayIssue.data\n  .filter(issue => issue.attributes?.status === 'open')\n  .slice(0, 10) // Limit to 10 issues per run\n  .map(issue => {\n    const attrs = issue.attributes || {};\n    const problems = attrs.problems || [];\n    const firstProblem = problems[0] || {};\n    \n    // Map Snyk severity to our format\n    const severityMap = {\n      'critical': 'critical',\n      'high': 'high',\n      'medium': 'medium',\n      'low': 'low'\n    };\n    \n    return {\n      id: issue.id || `SNYK-${Date.now()}`,\n      title: attrs.title || 'Security Issue',\n      severity: severityMap[attrs.severity] || 'medium',\n      description: attrs.description || 'Security vulnerability detected by Snyk',\n      affected_file: firstProblem.source?.file_path || 'unknown',\n      line_number: firstProblem.source?.start_line || 0,\n      cwe_id: attrs.classes?.map(c => c.id).find(id => id?.startsWith('CWE-')) || 'CWE-unknown',\n      package_name: attrs.key || 'unknown',\n      vulnerable_code: firstProblem.source?.code || '',\n      snyk_url: `https://app.snyk.io/org/${attrs.organization_id}/project/${attrs.project_id}`,\n      repository: attrs.project_name || 'unknown-repo',\n      scan_date: new Date().toISOString(),\n      scan_tool: 'Snyk Code'\n    };\n  });\n\nif (findings.length === 0) {\n  console.log('No open issues to process');\n  return [];\n}\n\nreturn findings.map(finding => ({ json: finding }));"
       },
-      "id": "format-analysis",
+      "id": "20ce8677-2a38-43c9-bb17-dd1adea7c024",
+      "name": "Parse Snyk Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -784,
+        384
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response and format for database storage\nconst response = $input.first().json;\n// AI node output can be in different formats\nconst aiContent = response.output || response.text || response.response || '';\n\nlet analysisResult;\ntry {\n  // Try to parse JSON from AI response\n  // Remove markdown code blocks if present\n  const cleanContent = aiContent.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  analysisResult = JSON.parse(cleanContent);\n} catch (error) {\n  // If JSON parsing fails, extract information manually\n  console.log('AI response is not valid JSON, extracting manually...');\n  \n  const tmpJson = $input.first().json;\n  const originalFinding = JSON.parse(tmpJson.message.content)\n  console.log(originalFinding)\n  \n  // Map severity to PCI requirement\n  let pciRequirement;\n  if (originalFinding.cwe_id === 'CWE-89') {\n    pciRequirement = '6.5.1'; // SQL Injection\n  } else if (originalFinding.cwe_id === 'CWE-79') {\n    pciRequirement = '6.5.7'; // XSS\n  } else if (originalFinding.cwe_id === 'CWE-338') {\n    pciRequirement = '6.5.3'; // Insecure cryptographic storage\n  } else {\n    pciRequirement = '6.5.6'; // Other high/critical vulnerabilities\n  }\n  \n  // Create structured result\n  analysisResult = {\n    finding_id: `PCI-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,\n    severity: originalFinding.severity,\n    pci_requirement: pciRequirement,\n    cwe_id: originalFinding.cwe_id,\n    title: originalFinding.title,\n    description: originalFinding.description,\n    fix_suggestion: getFix(originalFinding.cwe_id),\n    risk_score: getRiskScore(originalFinding.severity),\n    evidence: {\n      scan_tool: 'Snyk Code',\n      scan_date: new Date().toISOString(),\n      repo: originalFinding.evidence.repo,\n      file: originalFinding.evidence.file,\n      line: originalFinding.evidence.line\n    }\n  };\n}\n\n// Helper functions\nfunction getFix(cweId) {\n  const fixes = {\n    'CWE-89': 'Use parameterized queries: const query = \"SELECT * FROM payments WHERE user_id = ?\"; db.query(query, [userId]);',\n    'CWE-79': 'Encode output: const clean = DOMPurify.sanitize(userInput); res.send(`<h1>Error: ${clean}</h1>`);',\n    'CWE-338': 'Use crypto.randomBytes(): const crypto = require(\"crypto\"); const token = crypto.randomBytes(32).toString(\"hex\");'\n  };\n  return fixes[cweId] || 'Review code for security best practices and apply appropriate fixes.';\n}\n\nfunction getRiskScore(severity) {\n  const scores = { critical: 9, high: 7, medium: 5, low: 3 };\n  return scores[severity] || 5;\n}\n\n// Generate evidence package markdown\nconst evidenceDocument = `# Security Finding Evidence Package\\n\\n**Finding ID:** ${analysisResult.finding_id}\\n**Severity:** ${analysisResult.severity}\\n**PCI DSS Requirement:** ${analysisResult.pci_requirement}\\n**Risk Score:** ${analysisResult.risk_score}/10\\n\\n## Vulnerability Details\\n- **Repository:** ${analysisResult.evidence.repo}\\n- **File:** ${analysisResult.evidence.file}:${analysisResult.evidence.line}\\n- **CWE:** ${analysisResult.cwe_id}\\n- **Scan Tool:** ${analysisResult.evidence.scan_tool}\\n- **Discovery Date:** ${analysisResult.evidence.scan_date}\\n\\n## Description\\n${analysisResult.description}\\n\\n## Recommended Fix\\n\\`\\`\\`\\n${analysisResult.fix_suggestion}\\n\\`\\`\\`\\n\\n## Compliance Impact\\nThis vulnerability affects PCI DSS ${analysisResult.pci_requirement} compliance and must be addressed according to risk-based prioritization.\\n\\n---\\n*Generated by DOKU PCI Compliance Automation*\\n*Timestamp: ${new Date().toISOString()}*`;\n\n// Return formatted result\nreturn {\n  json: {\n    ...analysisResult,\n    evidence_document: evidenceDocument\n  }\n};"
+      },
+      "id": "8c6358ed-d99e-4302-b96c-4973a262a884",
       "name": "Format Analysis Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        900,
-        300
+        -336,
+        384
       ]
     },
     {
       "parameters": {
-        "operation": "insert",
-        "table": "findings",
-        "columns": "finding_id, repo_name, severity, title, description, fix_suggestion, affected_file, line_number, cwe_id, pci_requirement, risk_score, status",
-        "values": "={{$json.finding_id}}, {{$json.evidence.repo}}, {{$json.severity}}, {{$json.title}}, {{$json.description}}, {{$json.fix_suggestion}}, {{$json.evidence.file}}, {{$json.evidence.line}}, {{$json.cwe_id}}, {{$json.pci_requirement}}, {{$json.risk_score}}, open"
+        "operation": "executeQuery",
+        "query": "=INSERT INTO findings (finding_id, repo_name, severity, title, description, fix_suggestion, affected_file, line_number, cwe_id, pci_requirement, risk_score, status, created_at) \nVALUES (\n  '{{ $json.finding_id }}', \n  '{{ $json.evidence.repo }}', \n  '{{ $json.severity }}', \n  '{{ $json.title.replace(/'/g, \"''\") }}', \n  '{{ $json.description.replace(/'/g, \"''\") }}', \n  '{{ $json.fix_suggestion.replace(/'/g, \"''\") }}', \n  '{{ $json.evidence.file }}', \n  {{ $json.evidence.line }}, \n  '{{ $json.cwe_id }}', \n  '{{ $json.pci_requirement }}', \n  {{ $json.risk_score }}, \n  'open', \n  NOW()\n)\n\nRETURNING *",
+        "options": {}
       },
-      "id": "store-finding",
+      "id": "63513ddd-2f61-4d1a-bfdf-7aa2155362bf",
       "name": "Store Finding to Database",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        1120,
-        300
+        -112,
+        384
       ],
       "credentials": {
         "postgres": {
-          "id": "railway-postgres",
-          "name": "Railway PostgreSQL"
+          "id": "hZiHMgh7gHutpXAI",
+          "name": "Postgres account"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Store finding metadata to knowledge base for ChatBot learning\nconst finding = $input.first().json;\n\n// Create searchable content\nconst searchText = `${finding.title} - ${finding.description} - Fix: ${finding.fix_suggestion}`;\n\n// Extract keywords for search\nconst keywords = searchText\n  .toLowerCase()\n  .replace(/[^a-z0-9\\s]/g, ' ')\n  .split(/\\s+/)\n  .filter(word => word.length > 2)\n  .filter((word, index, arr) => arr.indexOf(word) === index) // Remove duplicates\n  .slice(0, 15); // Limit to 15 keywords\n\nreturn {\n  finding_id: finding.finding_id,\n  title: `Security Finding: ${finding.title}`,\n  content: searchText,\n  doc_type: 'evidence',\n  keywords: keywords,\n  source_type: 'evidence_package',\n  metadata: {\n    severity: finding.severity,\n    pci_requirement: finding.pci_requirement,\n    cwe_id: finding.cwe_id,\n    repo: finding.evidence.repo,\n    file: finding.evidence.file,\n    line: finding.evidence.line,\n    risk_score: finding.risk_score\n  }\n};"
+        "jsCode": "// Store finding metadata to knowledge base for ChatBot learning\nconst finding = $input.first().json;\n\n// Create searchable content\nconst searchText = `${finding.title} - ${finding.description} - Fix: ${finding.fix_suggestion}`;\n\n// Extract keywords for search\nconst keywords = searchText\n  .toLowerCase()\n  .replace(/[^a-z0-9\\s]/g, ' ')\n  .split(/\\s+/)\n  .filter(word => word.length > 2)\n  .filter((word, index, arr) => arr.indexOf(word) === index)\n  .slice(0, 15);\n\nconst keywordArray = keywords.map(k => k.replace(/'/g, \"''\")).join(\"','\");\n\nreturn {\n  json: {\n    finding_id: finding.finding_id,\n    title: `Security Finding: ${finding.title}`,\n    content: searchText.replace(/'/g, \"''\"),\n    doc_type: 'evidence',\n    keywords_array: `ARRAY['${keywordArray}']`,\n    source_type: 'evidence_package',\n    metadata_json: JSON.stringify({\n      severity: finding.severity,\n      pci_requirement: finding.pci_requirement,\n      cwe_id: finding.cwe_id,\n      repo: finding.repo_name,\n      file: finding.affected_file,\n      line: finding.line_number,\n      risk_score: finding.risk_score\n    })\n  }\n};"
       },
-      "id": "prepare-knowledge",
+      "id": "961df685-08cc-4b46-96a6-354c3a1064cd",
       "name": "Prepare Knowledge Base Entry",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1340,
-        300
+        96,
+        384
       ]
     },
     {
       "parameters": {
-        "operation": "insert",
-        "table": "knowledge_simple",
-        "columns": "title, content, doc_type, keywords, source_type",
-        "values": "={{$json.title}}, {{$json.content}}, {{$json.doc_type}}, ARRAY[{{$json.keywords.map(k => \"'\" + k.replace(/'/g, \"''\") + \"'\").join(',')}}], {{$json.source_type}}"
+        "operation": "executeQuery",
+        "query": "=INSERT INTO knowledge_simple (title, content, doc_type, keywords, source_type, created_at) VALUES ('{{ $json.title }}', '{{ $json.content }}', '{{ $json.doc_type }}', {{ $json.keywords_array }}, '{{ $json.source_type }}', NOW())\n\nRETURNING *",
+        "options": {}
       },
-      "id": "store-knowledge",
+      "id": "03a08d7f-acfe-4b76-b004-389ed112cb35",
       "name": "Store to Knowledge Base",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        1560,
-        300
+        320,
+        384
       ],
       "credentials": {
         "postgres": {
-          "id": "railway-postgres",
-          "name": "Railway PostgreSQL"
+          "id": "hZiHMgh7gHutpXAI",
+          "name": "Postgres account"
         }
       }
     },
     {
       "parameters": {
-        "authentication": "headerAuth",
-        "httpMethod": "POST",
-        "url": "=https://api.github.com/repos/the-bubur/{{$json.evidence.repo || 'hackathon-pci-compliance'}}/issues",
+        "method": "POST",
+        "url": "=https://api.github.com/repos/The-Bubur-ID/hackathon1/issues",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -192,66 +152,104 @@
           ]
         },
         "sendBody": true,
-        "contentType": "json",
-        "jsonBody": "={\n  \"title\": \"[{{$json.severity.toUpperCase()}}] {{$json.title}}\",\n  \"body\": \"## 🔒 Security Vulnerability\\n\\n**Finding ID:** {{$json.finding_id}}\\n**PCI DSS Requirement:** {{$json.pci_requirement}}\\n**Severity:** {{$json.severity}} (Risk Score: {{$json.risk_score}}/10)\\n**CWE:** {{$json.cwe_id}}\\n\\n### 📋 Vulnerability Description\\n{{$json.description}}\\n\\n### 📂 Affected Code\\n- **File:** `{{$json.evidence.file}}`\\n- **Line:** {{$json.evidence.line}}\\n\\n### 🔧 Recommended Fix\\n```\\n{{$json.fix_suggestion}}\\n```\\n\\n### ✅ Compliance Checklist\\n- [ ] Review security finding\\n- [ ] Implement recommended fix\\n- [ ] Test implementation\\n- [ ] Verify security scan passes\\n- [ ] Update documentation\\n- [ ] Mark as resolved\\n\\n### 🔗 References\\n- **Scan Tool:** {{$json.evidence.scan_tool}}\\n- **Discovery Date:** {{$json.evidence.scan_date}}\\n- **PCI DSS Requirement:** {{$json.pci_requirement}}\\n\\n---\\n*🤖 Auto-generated by DOKU PCI Compliance Automation*\",\n  \"labels\": [\"security\", \"{{$json.severity}}\", \"pci-compliance\", \"{{$json.cwe_id}}\"],\n  \"assignees\": []\n}",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"title\": \"[{{ $('Store Finding to Database').item.json.severity }}] - {{ $json.title }}\",\n  \"body\": \"## Security Vulnerability\\n\\n**Finding ID:** {{ $json.id }}\\n**PCI DSS Requirement:** {{ $('Store Finding to Database').item.json.pci_requirement }}\\n**Severity:** {{ $('Store Finding to Database').item.json.severity }} (Risk Score: {{ $('Store Finding to Database').item.json.risk_score }}/10)\\n**CWE:** {{ $('Store Finding to Database').item.json.cwe_id }}\\n\\n### Vulnerability Description\\n{{ $('Store Finding to Database').item.json.description }}\\n\\n### Affected Code\\n- **File:** `{{ $('Store Finding to Database').item.json.affected_file }}`\\n- **Line:** {{ $('Store Finding to Database').item.json.line_number }}\\n\\n### Recommended Fix\\n```\\n{{ $('Store Finding to Database').item.json.fix_suggestion }}\\n```\\n\\n### Compliance Checklist\\n- [ ] Review security finding\\n- [ ] Implement recommended fix\\n- [ ] Test implementation\\n- [ ] Verify security scan passes\\n- [ ] Update documentation\\n- [ ] Mark as resolved\\n\\n### References\\n- **PCI DSS Requirement:** {{ $('Store Finding to Database').item.json.pci_requirement }}\\n\\n---\\n*Auto-generated by DOKU PCI Compliance Automation*\",\n  \"labels\": [\"security\", \"{{ $('Store Finding to Database').item.json.severity }}\", \"pci-compliance\"]\n}",
         "options": {}
       },
-      "id": "create-github-issue",
+      "id": "10b17395-eb65-44c9-99ac-e7b80e4e2652",
       "name": "Create GitHub Issue",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
+      "typeVersion": 4.2,
       "position": [
-        1780,
-        300
+        544,
+        384
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "github-auth",
-          "name": "GitHub API"
+          "id": "sPQI06nof9em49E7",
+          "name": "Snyk Header Auth account"
+        },
+        "httpBearerAuth": {
+          "id": "B6rD6HJonOTMXjkH",
+          "name": "Github Bearer Auth account"
         }
       }
     },
     {
       "parameters": {
-        "operation": "insert",
-        "table": "evidence_packages",
-        "columns": "finding_id, evidence_document, compliance_metadata",
-        "values": "={{$json.finding_id}}, {{$json.evidence_document}}, {{JSON.stringify($json.metadata)}}"
+        "operation": "executeQuery",
+        "query": "=INSERT INTO evidence_packages (finding_id, evidence_document, created_at) VALUES ('{{ $('Store Finding to Database').item.json.finding_id }}', '{{ $json.body }}', NOW())",
+        "options": {}
       },
-      "id": "store-evidence",
+      "id": "59d62f61-de1b-44af-b2c8-9fca3861dd20",
       "name": "Store Evidence Package",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        2000,
-        300
+        768,
+        384
       ],
       "credentials": {
         "postgres": {
-          "id": "railway-postgres",
-          "name": "Railway PostgreSQL"
+          "id": "hZiHMgh7gHutpXAI",
+          "name": "Postgres account"
         }
       }
     },
     {
       "parameters": {
-        "operation": "insert",
-        "table": "workflow_logs",
-        "columns": "workflow_name, execution_id, status, duration_ms, findings_processed, metadata",
-        "values": "PCI Requirement 6 Automation, {{$execution.id}}, success, {{$execution.mode === 'manual' ? 30000 : 120000}}, 1, {{JSON.stringify({finding_id: $json.finding_id, severity: $json.severity, github_issue_created: true})}}"
+        "operation": "executeQuery",
+        "query": "=INSERT INTO workflow_logs (workflow_name, execution_id, status, findings_processed, created_at) VALUES ('PCI Requirement 6 Automation', '{{ $execution.id }}', 'success', 1, NOW())",
+        "options": {}
       },
-      "id": "log-execution",
-      "name": "Log Workflow Execution", 
+      "id": "c3ed2acd-c5b3-4d4e-8b21-f57c34f9ffa2",
+      "name": "Log Workflow Execution",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        2220,
-        300
+        992,
+        384
       ],
       "credentials": {
         "postgres": {
-          "id": "railway-postgres",
-          "name": "Railway PostgreSQL"
+          "id": "hZiHMgh7gHutpXAI",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "chatgpt-4o-latest",
+          "mode": "list",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a PCI DSS security expert specializing in Requirement 6 (Secure Development). Analyze the security finding and provide comprehensive remediation guidance.\n\nFor each finding, output EXACTLY this JSON structure (no markdown, no extra text):\n{\n  \"finding_id\": \"unique_id_based_on_input\",\n  \"severity\": \"critical|high|medium|low\",\n  \"pci_requirement\": \"6.x.x format\",\n  \"cwe_id\": \"from input\",\n  \"title\": \"clear title\",\n  \"description\": \"detailed vulnerability explanation\",\n  \"fix_suggestion\": \"specific code fix with examples\",\n  \"risk_score\": \"number 1-10\",\n  \"evidence\": {\n    \"scan_tool\": \"Snyk SAST\",\n    \"scan_date\": \"current_timestamp\",\n    \"repo\": \"repository_name\",\n    \"file\": \"affected_file_path\",\n    \"line\": \"line_number\"\n  }\n}",
+              "role": "system"
+            },
+            {
+              "content": "=Security Finding Analysis Request:\n\nFinding ID: {{$json.id}}\nTitle: {{$json.title}}\nSeverity: {{$json.severity}}\nDescription: {{$json.description}}\nAffected File: {{$json.affected_file}}:{{$json.line_number}}\nCWE: {{$json.cwe_id}}\nVulnerable Code: {{$json.vulnerable_code}}\nRepository: {{$json.repository}}\n\nPlease analyze this finding and map it to the appropriate PCI DSS Requirement 6 sub-requirement. Provide specific fix recommendations with code examples."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "883e5cca-2b85-4a3f-beec-45f78f29fb05",
+      "name": "AI Security Analysis1",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.4,
+      "position": [
+        -624,
+        160
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "gIx8rFZ15HJjRa6F",
+          "name": "OpenAi account"
         }
       }
     }
@@ -261,29 +259,29 @@
       "main": [
         [
           {
-            "node": "Mock Snyk Security Scan",
+            "node": "Get Snyk Code Issues",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Mock Snyk Security Scan": {
+    "Get Snyk Code Issues": {
       "main": [
         [
           {
-            "node": "AI Security Analysis",
+            "node": "Parse Snyk Response",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "AI Security Analysis": {
+    "Parse Snyk Response": {
       "main": [
         [
           {
-            "node": "Format Analysis Results",
+            "node": "AI Security Analysis1",
             "type": "main",
             "index": 0
           }
@@ -355,22 +353,22 @@
           }
         ]
       ]
+    },
+    "AI Security Analysis1": {
+      "main": [
+        [
+          {
+            "node": "Format Analysis Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "staticData": null,
-  "tags": [
-    {
-      "createdAt": "2025-10-25T10:00:00.000Z",
-      "updatedAt": "2025-10-25T10:00:00.000Z",
-      "id": "pci-compliance",
-      "name": "PCI Compliance"
-    }
-  ],
-  "triggerCount": 0,
-  "updatedAt": "2025-10-25T10:00:00.000Z",
-  "versionId": "1"
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fdde8e546dde0dc1fa7c0850190ff14589a25896ee7f167548c6198c470f624b"
+  }
 }
