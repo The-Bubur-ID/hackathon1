@@ -1,453 +1,439 @@
 {
-  "meta": {
-    "instanceId": "doku-compliance-poc"
-  },
-  "name": "Compliance ChatBot with RAG",
   "nodes": [
     {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "chat",
-        "responseMode": "responseNode",
-        "options": {
-          "noResponseBody": false
-        }
-      },
-      "id": "webhook-trigger",
-      "name": "ChatBot Webhook",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1.1,
+      "parameters": {},
+      "id": "c7eb1a9b-767b-4e51-b06e-01a3be3bf2ba",
+      "name": "Postgres Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
       "position": [
-        240,
-        300
+        1568,
+        448
       ],
-      "webhookId": "compliance-chatbot"
+      "credentials": {
+        "postgres": {
+          "id": "hZiHMgh7gHutpXAI",
+          "name": "Postgres account"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "// Validate and parse incoming ChatBot request\nconst body = $input.first().json.body;\n\nif (!body || !body.query) {\n  throw new Error('Missing required field: query');\n}\n\n// Extract and validate query parameters\nconst userQuery = body.query.trim();\nif (userQuery.length < 3) {\n  throw new Error('Query must be at least 3 characters long');\n}\n\nif (userQuery.length > 500) {\n  throw new Error('Query too long (max 500 characters)');\n}\n\n// Generate session ID if not provided\nconst sessionId = body.session_id || `sess_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;\nconst userId = body.user_id || 'anonymous';\n\n// Log the request\nconsole.log(`ChatBot query from ${userId}: ${userQuery}`);\n\n// Return structured query data\nreturn {\n  user_query: userQuery,\n  user_id: userId,\n  session_id: sessionId,\n  timestamp: new Date().toISOString(),\n  query_length: userQuery.length\n};"
-      },
-      "id": "validate-request",
-      "name": "Validate Request",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        460,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "model": "gpt-4o",
-        "options": {
-          "temperature": 0.2,
-          "maxTokens": 1500
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
         },
-        "messages": {
-          "values": [
-            {
-              "role": "system",
-              "content": "You are a PCI DSS compliance assistant with access to internal security policies, compliance documentation, and security findings database.\n\nWhen answering questions:\n1. Always search the knowledge base first using the search_knowledge_base tool\n2. If asking about specific findings, use the get_evidence_package tool\n3. For compliance status queries, use the check_compliance_status tool\n4. Provide accurate, cited responses with source references\n5. If information is not available, clearly state so\n6. Focus on actionable compliance guidance\n\nAlways cite your sources using: [Source: document_name]\nFor database results, use: [Source: Security Findings Database]"
-            },
-            {
-              "role": "user",
-              "content": "={{\"User Question: \" + $json.user_query + \"\\n\\nPlease help me with this PCI DSS compliance question. Search the knowledge base and provide a comprehensive answer with sources.\"}}"
-            }
-          ]
-        },
-        "tools": [
-          {
-            "toolType": "function",
-            "function": {
-              "name": "search_knowledge_base",
-              "description": "Search internal policies and compliance documentation using keyword search",
-              "parameters": {
-                "type": "object",
-                "properties": {
-                  "query": {
-                    "type": "string",
-                    "description": "Search query for finding relevant documents"
-                  },
-                  "doc_type": {
-                    "type": "string",
-                    "enum": ["policy", "compliance_doc", "evidence", "all"],
-                    "description": "Type of document to search (default: all)"
-                  },
-                  "top_k": {
-                    "type": "number",
-                    "description": "Number of results to return (default: 5, max: 10)"
-                  }
-                },
-                "required": ["query"]
-              }
-            }
-          },
-          {
-            "toolType": "function", 
-            "function": {
-              "name": "get_evidence_package",
-              "description": "Retrieve specific evidence package for security finding by ID",
-              "parameters": {
-                "type": "object",
-                "properties": {
-                  "finding_id": {
-                    "type": "string",
-                    "description": "Finding ID (e.g., PCI-12345-abc) or search term"
-                  }
-                },
-                "required": ["finding_id"]
-              }
-            }
-          },
-          {
-            "toolType": "function",
-            "function": {
-              "name": "check_compliance_status",
-              "description": "Query current status of findings and remediation progress",
-              "parameters": {
-                "type": "object",
-                "properties": {
-                  "pci_requirement": {
-                    "type": "string",
-                    "description": "PCI requirement number (e.g., '6.5.1') or 'all'"
-                  },
-                  "severity_filter": {
-                    "type": "string",
-                    "enum": ["critical", "high", "medium", "low", "all"],
-                    "description": "Filter by severity (default: all)"
-                  },
-                  "status_filter": {
-                    "type": "string",
-                    "enum": ["open", "in_progress", "resolved", "verified", "all"],
-                    "description": "Filter by status (default: all)"
-                  }
-                },
-                "required": []
-              }
-            }
-          }
-        ]
+        "options": {}
       },
-      "id": "ai-chatbot",
-      "name": "AI ChatBot with RAG",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1.4,
+      "id": "4ccff4f0-e6cf-4f1c-8b42-f604bc1c2bc7",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
       "position": [
-        680,
-        300
+        1472,
+        0
       ],
       "credentials": {
         "openAiApi": {
-          "id": "openai-credentials",
-          "name": "OpenAI API"
+          "id": "1l34Ckax0oYA9U8v",
+          "name": "OpenAi account 2"
         }
       }
     },
     {
       "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{$json.tool_calls?.[0]?.function?.name}}",
-              "operation": "equal",
-              "value2": "search_knowledge_base"
-            }
-          ]
-        }
-      },
-      "id": "is-search-tool",
-      "name": "Is Search Tool?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        900,
-        240
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{$json.tool_calls?.[0]?.function?.name}}",
-              "operation": "equal",
-              "value2": "get_evidence_package"
-            }
-          ]
-        }
-      },
-      "id": "is-evidence-tool",
-      "name": "Is Evidence Tool?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        1120,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{$json.tool_calls?.[0]?.function?.name}}",
-              "operation": "equal",
-              "value2": "check_compliance_status"
-            }
-          ]
-        }
-      },
-      "id": "is-compliance-tool",
-      "name": "Is Compliance Tool?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        1340,
-        360
-      ]
-    },
-    {
-      "parameters": {
         "operation": "executeQuery",
-        "query": "=SELECT \n  title, content, doc_type, source_type,\n  ts_rank(to_tsvector('english', content), plainto_tsquery('english', $1)) AS relevance\nFROM knowledge_simple \nWHERE (\n  ($2 = 'all' OR doc_type = $2) AND\n  (\n    to_tsvector('english', content) @@ plainto_tsquery('english', $1)\n    OR keywords && string_to_array(lower($1), ' ')\n    OR title ILIKE '%' || $1 || '%'\n  )\n)\nORDER BY relevance DESC, created_at DESC\nLIMIT LEAST(COALESCE($3::int, 5), 10);",
-        "additionalFields": {},
-        "options": {}
+        "query": "INSERT INTO chatbot_queries (\n  user_query, bot_response, sources_used, confidence_score, response_time_ms\n) VALUES (\n  $1, $2, $3, $4, $5\n) RETURNING id;",
+        "options": {
+          "queryReplacement": "={{ $json.user_query_sql }},={{ $json.answer_sql }},={{ JSON.stringify($json.sources || []) }},={{ 0.85 }},={{ $json.response_time_sql }}"
+        }
       },
-      "id": "search-knowledge-base",
-      "name": "Search Knowledge Base", 
+      "id": "aa90684f-cd3f-40fc-9c25-6056c11ae508",
+      "name": "Log Chat Interaction",
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.4,
+      "typeVersion": 2.5,
       "position": [
-        1120,
-        200
+        2384,
+        192
       ],
       "credentials": {
         "postgres": {
-          "id": "railway-postgres",
-          "name": "Railway PostgreSQL"
+          "id": "hZiHMgh7gHutpXAI",
+          "name": "Postgres account"
         }
-      }
+      },
+      "disabled": true,
+      "continueOnFail": true
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "=SELECT \n  f.finding_id, f.title, f.severity, f.description, f.fix_suggestion,\n  f.affected_file, f.line_number, f.cwe_id, f.pci_requirement, f.status,\n  ep.evidence_document\nFROM findings f\nLEFT JOIN evidence_packages ep ON f.finding_id = ep.finding_id\nWHERE \n  f.finding_id ILIKE '%' || $1 || '%'\n  OR f.title ILIKE '%' || $1 || '%'\n  OR f.description ILIKE '%' || $1 || '%'\nORDER BY f.created_at DESC\nLIMIT 5;",
-        "additionalFields": {},
-        "options": {}
+        "jsCode": "const payload = $json;\nconst startItem = $items('Validate Chat Message', 0, 0)[0];\nconst startedAt = startItem ? new Date(startItem.json.timestamp) : new Date();\nconst responseTime = Date.now() - startedAt.getTime();\nconst escapeSql = (value) => (value || '').replace(/'/g, \"''\");\nreturn {\n  answer: payload.answer,\n  sources: payload.sources,\n  user_query: payload.user_query,\n  session_id: payload.session_id,\n  user_id: payload.user_id,\n  context_count: payload.context_count,\n  timestamp: payload.timestamp,\n  response_time_ms: responseTime,\n  user_query_sql: escapeSql(payload.user_query),\n  answer_sql: escapeSql(payload.answer),\n  sources_sql: JSON.stringify(payload.sources || []),\n  context_count_sql: payload.context_count || 0,\n  response_time_sql: responseTime\n};"
       },
-      "id": "get-evidence-package",
-      "name": "Get Evidence Package",
-      "type": "n8n-nodes-base.postgres", 
-      "typeVersion": 2.4,
+      "id": "8c3de360-3702-4252-a31f-f045066db5fd",
+      "name": "Prepare Chat Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        1120,
-        300
+        2160,
+        192
       ],
-      "credentials": {
-        "postgres": {
-          "id": "railway-postgres",
-          "name": "Railway PostgreSQL"
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const agentOutput = $json.output || $json.result || $json.answer || '';\nconst answer = agentOutput || 'I do not have enough information to answer right now.';\nconst rawContext = $items('Prepare Agent Input', 0, 0)[0]?.json || {};\nconst kbMatches = [...answer.matchAll(/\\[KB-(\\d+)\\]/g)].map(match => `KB-${match[1]}`);\nconst findingMatches = [...answer.matchAll(/\\[FINDING-(\\d+)\\]/g)].map(match => `FINDING-${match[1]}`);\nconst statusMatches = [...answer.matchAll(/\\[STATUS-(\\d+)\\]/g)].map(match => `STATUS-${match[1]}`);\nconst referenced = new Set([...kbMatches, ...findingMatches, ...statusMatches]);\nconst sources = Array.from(referenced.values());\nreturn {\n  answer,\n  sources,\n  user_query: rawContext.user_query,\n  session_id: rawContext.session_id,\n  user_id: rawContext.user_id,\n  context_count: rawContext.context_count || 0,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "e0e8104d-d0c0-4125-b6d3-a766d3fa1220",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        192
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=You are a PCI DSS compliance expert assistant.\n\n# CONTEXT FROM DATABASE:\n{{ $json.compiled_context }}\n\n---\n\n# INSTRUCTIONS:\n1. Answer the user's SPECIFIC question using ONLY the context above\n2. Always cite sources using [KB-1], [FINDING-2], etc.\n3. If the context doesn't contain relevant information, say: \"I don't have specific information about that in my knowledge base.\"\n4. Be direct, specific, and actionable\n5. Focus on answering what the user actually asked\n6. Use technical accuracy - this is for security professionals\n7. Don't provide generic summaries unless specifically asked\n\n# IMPORTANT:\n- Answer the question directly and specifically\n- Don't start with \"You have not provided a specific question\"\n- The user's question is clear - answer it using the context\n- If context is empty or not relevant, say so clearly"
         }
-      }
+      },
+      "id": "c7f27530-b8f4-48ad-920a-c57ff7cea7af",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json;\n            const kbList = (data.kb_results || []).map((r, i) => `[KB-${i + 1}] ${r.title}\n${r.content}`);\n            const evidenceList = (data.evidence_results || []).map((r, i) => `[FINDING-${i + 1}] ${r.title} (${r.severity})\nStatus: ${r.status}\nPCI: ${r.pci_requirement}\nDescription: ${r.description}\nFix: ${r.fix_suggestion}`);\n            const statusList = (data.status_results || []).map((r, i) => `PCI ${r.pci_requirement}: ${r.total_findings} findings (Critical: ${r.critical_count}, Open: ${r.open_count})`);\n            const contextSections = [\n              kbList.length ? `# Knowledge Base\n${kbList.join('\\n\\n')}` : '',\n              evidenceList.length ? `# Security Findings\n${evidenceList.join('\\n\\n')}` : '',\n              statusList.length ? `# Compliance Status\n${statusList.join('\\n')}` : ''\n            ].filter(Boolean);\n            const compiledContext = contextSections.join('\\n\\n');\n            const contextText = compiledContext || 'No additional context available.';\n            const prompt = [\n              `User Question: ${data.user_query}`,\n              '',\n              'Relevant Context:',\n              contextText\n            ].join('\\n');\n            return {\n              user_query: data.user_query,\n              session_id: data.session_id,\n              user_id: data.user_id,\n              compiled_context: contextText,\n              context_count: data.total_context_items,\n              timestamp: data.timestamp,\n              chatInput: prompt\n            };"
+      },
+      "id": "38ad7caf-3ef4-4e23-b9b7-92c348931701",
+      "name": "Prepare Agent Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function safeGetNodeItems(nodeName) {\n  try {\n    return $items(nodeName, 0, 0).map(item => item.json);\n  } catch (error) {\n    return [];\n  }\n}\nconst base = $('Detect Data Needs').first().json;\nconst kbRows = safeGetNodeItems('Search Knowledge Base');\nconst evidenceRows = safeGetNodeItems('Search Evidence');\nconst statusRows = safeGetNodeItems('Get Compliance Status');\nconst kbResults = kbRows.map(row => ({\n  title: row.title,\n  content: row.content,\n  doc_type: row.doc_type,\n  source_type: row.source_type,\n  relevance: row.relevance ?? 0\n}));\nconst evidenceResults = evidenceRows.map(row => ({\n  finding_id: row.finding_id,\n  title: row.title,\n  severity: row.severity,\n  description: row.description,\n  fix_suggestion: row.fix_suggestion,\n  pci_requirement: row.pci_requirement,\n  status: row.status\n}));\nconst statusResults = statusRows.map(row => ({\n  pci_requirement: row.pci_requirement,\n  total_findings: row.total_findings,\n  critical_count: row.critical_count,\n  high_count: row.high_count,\n  open_count: row.open_count,\n  resolved_count: row.resolved_count\n}));\nreturn {\n  user_query: base.user_query,\n  session_id: base.session_id,\n  user_id: base.user_id,\n  timestamp: base.timestamp,\n  needs_kb: base.needs_kb,\n  needs_evidence: base.needs_evidence,\n  needs_status: base.needs_status,\n  kb_results: kbResults,\n  evidence_results: evidenceResults,\n  status_results: statusResults,\n  total_context_items: kbResults.length + evidenceResults.length + statusResults.length\n};"
+      },
+      "id": "bef79158-5874-4bf1-9d5e-3682afd6cde5",
+      "name": "Merge All Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        192
+      ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=SELECT \n  COALESCE(f.pci_requirement, 'Unknown') as pci_requirement,\n  COUNT(*) as total_findings,\n  COUNT(CASE WHEN f.severity = 'critical' THEN 1 END) as critical_count,\n  COUNT(CASE WHEN f.severity = 'high' THEN 1 END) as high_count,\n  COUNT(CASE WHEN f.severity = 'medium' THEN 1 END) as medium_count,\n  COUNT(CASE WHEN f.severity = 'low' THEN 1 END) as low_count,\n  COUNT(CASE WHEN f.status = 'open' THEN 1 END) as open_count,\n  COUNT(CASE WHEN f.status = 'resolved' THEN 1 END) as resolved_count,\n  COUNT(CASE WHEN f.status = 'verified' THEN 1 END) as verified_count\nFROM findings f\nWHERE \n  ($1 = 'all' OR f.pci_requirement = $1 OR f.pci_requirement ILIKE '%' || $1 || '%')\n  AND ($2 = 'all' OR f.severity = $2)\n  AND ($3 = 'all' OR f.status = $3)\n  AND f.created_at >= NOW() - INTERVAL '30 days'\nGROUP BY f.pci_requirement\nORDER BY total_findings DESC;",
-        "additionalFields": {},
+        "query": "SELECT \n  COALESCE(f.pci_requirement, 'Unknown') as pci_requirement,\n  COUNT(*) as total_findings,\n  COUNT(CASE WHEN f.severity = 'critical' THEN 1 END) as critical_count,\n  COUNT(CASE WHEN f.severity = 'high' THEN 1 END) as high_count,\n  COUNT(CASE WHEN f.status = 'open' THEN 1 END) as open_count,\n  COUNT(CASE WHEN f.status = 'resolved' THEN 1 END) as resolved_count\nFROM findings f\nWHERE f.created_at >= NOW() - INTERVAL '30 days'\nGROUP BY f.pci_requirement\nORDER BY total_findings DESC;",
         "options": {}
       },
-      "id": "check-compliance-status",
-      "name": "Check Compliance Status",
+      "id": "f9506cc7-5a4d-4eea-9f7b-4f20db158e10",
+      "name": "Get Compliance Status",
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.4,
+      "typeVersion": 2.5,
       "position": [
-        1120,
+        544,
         400
       ],
       "credentials": {
         "postgres": {
-          "id": "railway-postgres",
-          "name": "Railway PostgreSQL"
+          "id": "hZiHMgh7gHutpXAI",
+          "name": "Postgres account"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Format tool results and prepare for AI response\nconst toolCall = $input.first().json.tool_calls?.[0];\nconst toolName = toolCall?.function?.name;\nconst toolArgs = toolCall?.function?.arguments;\n\n// Get results from the appropriate database query\nlet toolResults = [];\nlet resultType = '';\n\n// Check which tool was called and format results accordingly\nif (toolName === 'search_knowledge_base') {\n  const dbResults = $input.all().filter(item => item.json.title !== undefined);\n  resultType = 'knowledge_search';\n  \n  toolResults = dbResults.map(item => ({\n    title: item.json.title,\n    content: item.json.content?.substring(0, 300) + '...', // Truncate for context\n    doc_type: item.json.doc_type,\n    source_type: item.json.source_type,\n    relevance: item.json.relevance || 0\n  }));\n  \n} else if (toolName === 'get_evidence_package') {\n  const dbResults = $input.all().filter(item => item.json.finding_id !== undefined);\n  resultType = 'evidence_search';\n  \n  toolResults = dbResults.map(item => ({\n    finding_id: item.json.finding_id,\n    title: item.json.title,\n    severity: item.json.severity,\n    description: item.json.description,\n    fix_suggestion: item.json.fix_suggestion,\n    affected_file: item.json.affected_file,\n    line_number: item.json.line_number,\n    cwe_id: item.json.cwe_id,\n    pci_requirement: item.json.pci_requirement,\n    status: item.json.status\n  }));\n  \n} else if (toolName === 'check_compliance_status') {\n  const dbResults = $input.all().filter(item => item.json.pci_requirement !== undefined);\n  resultType = 'compliance_status';\n  \n  toolResults = dbResults.map(item => ({\n    pci_requirement: item.json.pci_requirement,\n    total_findings: item.json.total_findings,\n    critical_count: item.json.critical_count,\n    high_count: item.json.high_count,\n    medium_count: item.json.medium_count,\n    low_count: item.json.low_count,\n    open_count: item.json.open_count,\n    resolved_count: item.json.resolved_count,\n    verified_count: item.json.verified_count\n  }));\n}\n\n// Prepare response data\nconst response = {\n  tool_name: toolName,\n  tool_arguments: toolArgs,\n  result_type: resultType,\n  results: toolResults,\n  result_count: toolResults.length,\n  search_query: toolArgs?.query || toolArgs?.finding_id || 'status_check'\n};\n\nconsole.log(`Tool ${toolName} returned ${toolResults.length} results`);\n\nreturn response;"
-      },
-      "id": "format-tool-results", 
-      "name": "Format Tool Results",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1340,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Combine original AI response with tool results and format final response\nconst originalData = $input.first().json;\nconst aiResponse = originalData.response || 'I apologize, but I encountered an issue processing your request.';\nconst toolResults = originalData.results || [];\nconst resultType = originalData.result_type;\nconst searchQuery = originalData.search_query;\n\n// Calculate confidence score based on results\nlet confidenceScore = 0.5; // Default\nif (toolResults.length > 0) {\n  if (resultType === 'knowledge_search') {\n    // Higher confidence for knowledge base matches\n    const avgRelevance = toolResults.reduce((sum, r) => sum + (r.relevance || 0), 0) / toolResults.length;\n    confidenceScore = Math.min(0.95, 0.6 + (avgRelevance * 0.35));\n  } else if (resultType === 'evidence_search') {\n    // High confidence for direct evidence matches\n    confidenceScore = 0.9;\n  } else if (resultType === 'compliance_status') {\n    // High confidence for status data\n    confidenceScore = 0.95;\n  }\n}\n\n// Format sources for citation\nlet sources = [];\nif (toolResults.length > 0) {\n  if (resultType === 'knowledge_search') {\n    sources = toolResults.map((result, index) => ({\n      id: index + 1,\n      title: result.title,\n      type: result.doc_type,\n      source: result.source_type === 'manual' ? 'Internal Documentation' : 'Evidence Package',\n      relevance: parseFloat((result.relevance || 0).toFixed(3))\n    }));\n  } else if (resultType === 'evidence_search') {\n    sources = toolResults.map((result, index) => ({\n      id: index + 1,\n      title: `Finding: ${result.title}`,\n      type: 'security_finding',\n      source: 'Security Findings Database',\n      finding_id: result.finding_id,\n      severity: result.severity,\n      status: result.status\n    }));\n  } else if (resultType === 'compliance_status') {\n    sources = [{\n      id: 1,\n      title: 'Compliance Status Report',\n      type: 'compliance_data',\n      source: 'Security Findings Database',\n      data_range: 'Last 30 days'\n    }];\n  }\n}\n\n// Response time calculation (estimated)\nconst responseTime = 2000 + (toolResults.length * 100); // Base + per result\n\n// Final formatted response\nconst finalResponse = {\n  status: 'success',\n  answer: aiResponse,\n  sources: sources,\n  confidence: parseFloat(confidenceScore.toFixed(2)),\n  result_count: toolResults.length,\n  search_query: searchQuery,\n  response_time_ms: responseTime,\n  session_id: originalData.session_id || 'unknown',\n  timestamp: new Date().toISOString(),\n  user_id: originalData.user_id || 'anonymous'\n};\n\nreturn finalResponse;"
-      },
-      "id": "format-final-response",
-      "name": "Format Final Response",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1560,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "insert",
-        "schema": "public",
-        "table": "chatbot_queries",
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "user_query": "={{$json.search_query}}",
-            "bot_response": "={{$json.answer}}",
-            "sources_used": "={{JSON.stringify($json.sources)}}",
-            "confidence_score": "={{$json.confidence}}",
-            "response_time_ms": "={{$json.response_time_ms}}"
-          }
+        "operation": "executeQuery",
+        "query": "SELECT \n  f.finding_id, f.title, f.severity, f.description, \n  f.fix_suggestion, f.pci_requirement, f.status\nFROM findings f\nWHERE \n  f.title ILIKE '%' || $1 || '%'\n  OR f.description ILIKE '%' || $1 || '%'\n  OR f.cwe_id ILIKE '%' || $1 || '%'\nORDER BY \n  CASE f.severity \n    WHEN 'critical' THEN 1\n    WHEN 'high' THEN 2\n    WHEN 'medium' THEN 3\n    ELSE 4\n  END,\n  f.created_at DESC\nLIMIT 5;",
+        "options": {
+          "queryReplacement": "={{ $json.user_query }}"
         }
       },
-      "id": "log-query",
-      "name": "Log ChatBot Query",
+      "id": "91c15166-5a2a-4790-8bee-1681295951f9",
+      "name": "Search Evidence",
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.4,
+      "typeVersion": 2.5,
       "position": [
-        1780,
-        300
+        544,
+        192
       ],
       "credentials": {
         "postgres": {
-          "id": "railway-postgres", 
-          "name": "Railway PostgreSQL"
+          "id": "hZiHMgh7gHutpXAI",
+          "name": "Postgres account"
         }
       }
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{$json}}",
+        "operation": "executeQuery",
+        "query": "SELECT \n  title, content, doc_type, source_type,\n  ts_rank(to_tsvector('english', content), plainto_tsquery('english', $1)) AS relevance\nFROM knowledge_simple \nWHERE \n  to_tsvector('english', content) @@ plainto_tsquery('english', $1)\n  OR keywords && string_to_array(lower($1), ' ')\n  OR title ILIKE '%' || $1 || '%'\nORDER BY relevance DESC\nLIMIT 5;",
         "options": {
-          "responseHeaders": {
-            "entries": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "name": "Access-Control-Allow-Origin", 
-                "value": "*"
-              },
-              {
-                "name": "Access-Control-Allow-Methods",
-                "value": "POST, OPTIONS"
-              },
-              {
-                "name": "Access-Control-Allow-Headers",
-                "value": "Content-Type, Authorization"
-              }
-            ]
-          }
+          "queryReplacement": "={{ $json.user_query }}"
         }
       },
-      "id": "webhook-response",
-      "name": "Return Response",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
+      "id": "24a7233a-30fe-4c71-a3ca-85dbaaa706c2",
+      "name": "Search Knowledge Base",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
       "position": [
-        2000,
-        300
+        560,
+        -16
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "hZiHMgh7gHutpXAI",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "needs_status",
+              "leftValue": "={{ $json.needs_status }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combineOperation": "any"
+        },
+        "options": {}
+      },
+      "id": "58668349-c6bf-4120-96ae-a7c83910ff6e",
+      "name": "Need Status?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        320,
+        304
       ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "needs_evidence",
+              "leftValue": "={{ $json.needs_evidence }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combineOperation": "any"
+        },
+        "options": {}
+      },
+      "id": "e071030c-e60e-4ad4-af0c-9072d35db888",
+      "name": "Need Evidence?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        320,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "needs_kb",
+              "leftValue": "={{ $json.needs_kb }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combineOperation": "any"
+        },
+        "options": {}
+      },
+      "id": "cc04c929-1fdc-4176-a59d-cc5cd78dd2d8",
+      "name": "Need KB?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        320,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const query = $json.user_query || '';\nconst keywords = query.toLowerCase();\nlet needsKB = false;\nlet needsEvidence = false;\nlet needsStatus = false;\nif (keywords.match(/what|how|explain|tell|describe|policy|requirement|compliance|guideline/)) {\n  needsKB = true;\n}\nif (keywords.match(/finding|evidence|vulnerability|vuln|security issue|cve|cwe/)) {\n  needsEvidence = true;\n}\nif (keywords.match(/status|progress|open|resolved|critical|how many|summary/)) {\n  needsStatus = true;\n}\nif (!needsKB && !needsEvidence && !needsStatus) {\n  needsKB = true;\n}\nreturn {\n  user_query: $json.user_query,\n  session_id: $json.session_id,\n  user_id: $json.user_id,\n  timestamp: $json.timestamp,\n  needs_kb: needsKB,\n  needs_evidence: needsEvidence,\n  needs_status: needsStatus\n};"
+      },
+      "id": "d0d9dd4b-5cc2-4a0c-b238-d4ad4cdd8eee",
+      "name": "Detect Data Needs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nreturn items.map(item => {\n  const payload = item.json || {};\n  const message = (payload.chatInput || payload.text || payload.query || '').trim();\n  if (!message) {\n    throw new Error('Missing required chat message');\n  }\n  const sessionId = payload.sessionId || payload.session_id || `sess_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;\n  const userId = payload.userId || payload.user_id || payload.sender || 'anonymous';\n  return {\n    json: {\n      user_query: message,\n      session_id: sessionId,\n      user_id: userId,\n      timestamp: new Date().toISOString()\n    }\n  };\n});"
+      },
+      "id": "4010e993-f545-420f-ace3-bee197b6bcd1",
+      "name": "Validate Chat Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "id": "f42e639b-d38f-4763-a369-5112613f4c8d",
+      "name": "When Chat Message Received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -336,
+        208
+      ],
+      "webhookId": "compliance-chatbot"
     }
   ],
   "connections": {
-    "ChatBot Webhook": {
-      "main": [
+    "Postgres Chat Memory": {
+      "ai_memory": [
         [
           {
-            "node": "Validate Request",
-            "type": "main", 
+            "node": "AI Agent",
+            "type": "ai_memory",
             "index": 0
           }
         ]
       ]
     },
-    "Validate Request": {
-      "main": [
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
         [
           {
-            "node": "AI ChatBot with RAG",
-            "type": "main",
+            "node": "AI Agent",
+            "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "AI ChatBot with RAG": {
+    "Prepare Chat Log": {
       "main": [
         [
           {
-            "node": "Is Search Tool?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Is Search Tool?": {
-      "main": [
-        [
-          {
-            "node": "Search Knowledge Base",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Is Evidence Tool?",
+            "node": "Log Chat Interaction",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Is Evidence Tool?": {
+    "Format Response": {
       "main": [
         [
           {
-            "node": "Get Evidence Package",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Is Compliance Tool?",
+            "node": "Prepare Chat Log",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Is Compliance Tool?": {
+    "AI Agent": {
       "main": [
         [
           {
-            "node": "Check Compliance Status",
+            "node": "Format Response",
             "type": "main",
             "index": 0
           }
-        ],
+        ]
+      ]
+    },
+    "Prepare Agent Input": {
+      "main": [
         [
           {
-            "node": "Format Tool Results",
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All Context": {
+      "main": [
+        [
+          {
+            "node": "Prepare Agent Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Compliance Status": {
+      "main": [
+        [
+          {
+            "node": "Merge All Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Evidence": {
+      "main": [
+        [
+          {
+            "node": "Merge All Context",
             "type": "main",
             "index": 0
           }
@@ -458,62 +444,83 @@
       "main": [
         [
           {
-            "node": "Format Tool Results",
+            "node": "Merge All Context",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Evidence Package": {
+    "Need Status?": {
       "main": [
         [
           {
-            "node": "Format Tool Results",
+            "node": "Get Compliance Status",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check Compliance Status": {
+    "Need Evidence?": {
       "main": [
         [
           {
-            "node": "Format Tool Results",
+            "node": "Search Evidence",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Format Tool Results": {
+    "Need KB?": {
       "main": [
         [
           {
-            "node": "Format Final Response",
+            "node": "Search Knowledge Base",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Format Final Response": {
+    "Detect Data Needs": {
       "main": [
         [
           {
-            "node": "Log ChatBot Query",
+            "node": "Need Status?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Need Evidence?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Need KB?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Log ChatBot Query": {
+    "Validate Chat Message": {
       "main": [
         [
           {
-            "node": "Return Response",
+            "node": "Detect Data Needs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Chat Message Received": {
+      "main": [
+        [
+          {
+            "node": "Validate Chat Message",
             "type": "main",
             "index": 0
           }
@@ -522,25 +529,8 @@
     }
   },
   "pinData": {},
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "staticData": null,
-  "tags": [
-    {
-      "createdAt": "2025-10-25T10:00:00.000Z",
-      "updatedAt": "2025-10-25T10:00:00.000Z", 
-      "id": "pci-compliance",
-      "name": "PCI Compliance"
-    },
-    {
-      "createdAt": "2025-10-25T10:00:00.000Z",
-      "updatedAt": "2025-10-25T10:00:00.000Z",
-      "id": "chatbot",
-      "name": "ChatBot"
-    }
-  ],
-  "triggerCount": 0,
-  "updatedAt": "2025-10-25T10:00:00.000Z",
-  "versionId": "1"
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fdde8e546dde0dc1fa7c0850190ff14589a25896ee7f167548c6198c470f624b"
+  }
 }
